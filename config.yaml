@@ -1,0 +1,15 @@
+
+project:
+    name: PD1WES
+    sample_list: samples.list
+    bam_list: bams.list
+    pair_list: pairs.list
+resources:
+    reference:
+        key: GRCh37
+        fasta: $HOME/resources/Genomes/Human/GRCh37/human_g1k_v37.fasta
+    library:
+        library_key: SureSelect-Exon_v6+COSMIC.S07604715
+        targets_key: S07604715
+        targets_intervals: resources/SureSelect-Exon_v6+COSMIC.S07604715.Covered.intervals
+        gnomad_vcf: resources/gnomad.exomes.r2.0.2.sites.S07604715.common_biallelic_snps.simplified.vcf.gz

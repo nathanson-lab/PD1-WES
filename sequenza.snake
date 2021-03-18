@@ -1,0 +1,84 @@
+############################
+#Brad Wubbenhorst
+#bwubb@pennmedicine.upenn.edu
+#Dec. 2018
+
+#This code is used to run Sequenza paired somatic allele specific copy number calling.
+#It requires snakemake, the R package sequenza, and sequenza-utils
+
+#File with full list of samples.
+with open(config.get('project',{}).get('sample_list','samples.list'),'r') as i:
+    SAMPLES=i.read().splitlines()
+
+#Tab separated file. Tumor Normal pairs
+with open(config.get('project',{}).get('pair_list','pairs.list'),'r') as p:
+    PAIRS=dict(line.split('\t') for line in p.read().splitlines())
+
+#You can provide a tab-separated file: sample,path_to_bam
+if config.get('project',{}).get('bam_list',False):
+    with open(config['project']['bam_list'],'r') as b:
+        BAMS=dict(line.split('\t') for line in b.read().splitlines())
+
+def sample_bam(wildcards):
+    if getattr(wildcards,'tumor',False):
+        name=wildcards.tumor
+    elif getattr(wildcards,'normal',False):
+        name=wildcards.normal
+    else:
+        name=wildcards.sample
+    if config['project'].get('bam_list',False):
+        return BAMS[name]
+
+def paired_pileup(wildcards):
+    targets=wildcards.targets
+    tumor=wildcards.tumor
+    normal=PAIRS[wildcards.tumor]
+    return {'tumor':f'data/work/{tumor}/{targets}/sequenza/raw.mpileup','normal':f'data/work/{normal}/{targets}/sequenza/raw.mpileup'}
+
+rule all:
+    input:
+        expand("data/work/{tumor}/{targets}/sequenza/{tumor}_segments.txt",tumor=PAIRS.keys(),targets=config['resources']['library']['targets_key'])
+
+rule raw_mpileup:
+    input:
+        sample_bam
+    output:
+        "data/work/{sample}/{targets}/sequenza/raw.mpileup"
+    params:
+        ref=config['resources']['reference']['fasta']
+    shell:
+        "samtools mpileup -A -B -R -o {output} -f {params.ref} -Q 20 {input}"
+
+rule bam2seqz:
+    input:
+        unpack(paired_pileup)
+    params:
+        gc="$HOME/resources/Genomes/Human/GRCh37/custom-GRCh37.gc50Base.txt.gz"
+    output:
+        "data/work/{tumor}/{targets}/sequenza/seqz.gz"
+    shell:
+        "sequenza-utils bam2seqz --pileup -gc {params.gc} -n {input.normal} -t {input.tumor} | gzip > {output}"
+
+rule seqz_bin:
+    input:
+        "data/work/{tumor}/{targets}/sequenza/seqz.gz"
+    output:
+        "data/work/{tumor}/{targets}/sequenza/seqz.small.gz"
+    params:
+        bin=50
+        #50 for exome 200 for genome
+    shell:
+        "sequenza-utils seqz_binning -w {params.bin} -s {input} -o - | gzip > {output}"
+
+rule seqz_extract:
+    input:
+        "data/work/{tumor}/{targets}/sequenza/seqz.small.gz"
+    output:
+        "data/work/{tumor}/{targets}/sequenza/{tumor}_confints_CP.txt",
+        "data/work/{tumor}/{targets}/sequenza/{tumor}_segments.txt"
+    params:
+        outdir="data/work/{tumor}/{targets}/sequenza"
+    threads:
+        4
+    script:
+        "sequenza-snakemake.R"
