@@ -26,5 +26,6 @@ Brad Wubbenhorst
 <bwubb@pennmedicine.upenn.edu>
 
 ## Paper Citation
+Huang, A.C., Orlowski, R.J., Xu, X. et al. A single dose of neoadjuvant PD-1 blockade predicts clinical outcomes in resectable melanoma. Nat Med 25, 454–461 (2019). https://doi.org/10.1038/s41591-019-0357-y
 
 [![DOI](https://zenodo.org/badge/162582612.svg)](https://zenodo.org/badge/latestdoi/162582612)
